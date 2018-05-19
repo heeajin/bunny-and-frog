@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="//cdn.jsdelivr.net/npm/phaser-ce@2.10.5/build/phaser.min.js"></script>
+</head>
+<body style="margin: 0px">
+
+    <script>
+var game = new Phaser.Game(300, 200, Phaser.AUTO, 'phaser-example', { preload: preload, create: create, update:update});
+
+function preload() {
+    game.load.audio('dring', [ 'assets/audio/p-ping.mp3']);
+    game.load.audio('bit', [ 'assets/audio/squit.mp3']);
+
+    game.load.spritesheet('bunny', 'assets/sprites/bunny.png', 97, 109, 2);
+    game.load.spritesheet('frog', 'assets/sprites/frog.png', 51, 78, 2 );
+
+    game.load.audio('bunny_fx1', 'assets/audio/bunny.wav');
+    game.load.audio('frog_fx1', 'assets/audio/frog.wav');
+    game.load.audio('bunny_fx2', 'assets/audio/bunny_turn.wav');
+    game.load.audio('frog_fx2', 'assets/audio/frog_turn.wav');
+
+    game.load.image('guide', 'assets/sprites/guid.png');
+}
+
+var bit_fx, love_fx;
+
+var bpm = 200;
+var bps = bpm / 60;
+var spb = 1 / bps;
+var mspb = spb * 1000;
+
+var start_delay = mspb*1;
+
+var _ = 0;
+
+var rythmn1 = new Array(1, _, _, _, 1, _,_ , _, 1, _, _, _, 1, _,_ , _);
+var rythmn2 = new Array(1, _, _, _, 1, _, _, _, 1, _, 1, _, 1, _, _, _);
+var rythmn3 = new Array(1, _, _, _, 1, _, _, _, 1, _, 1, _, _, _, _, _);
+
+var rythmn4 = new Array(1, _, 1, _, 1, _, 1, _, 1, _, _, _, 1, _,_ , _);
+var rythmn5 = new Array(1, _, _, _, 1, _, _, _, 1, _, 1, _, _, _, _, 1);
+var rythmn6 = new Array(1, _, 1, _, 1, 1, 1, _, 1, _, 1, _, _, _, 1, _);
+var rythmn7 = new Array(1, _, 1, _, 1, 1, 1, 1, 1, _, 1, _, 1, _, _, 1);
+
+var rythmns = new Array( rythmn1, rythmn1, rythmn2,
+						210,rythmn1, rythmn1, rythmn2, rythmn3,
+						240, rythmn1, rythmn2, rythmn4, rythmn5,
+						280, rythmn1, rythmn2, rythmn4, rythmn5, rythmn6, rythmn7);
+var rphaser = new Array(0, 3, 8, 13);
+var current_phaser = 0;
+
+var rythmn_cur;
+
+var turn_now;
+
+var turn_time_enemy;
+var turn_time_player;
+
+var onRythmnFinished;
+
+var bunny;
+
+var bunny_up_tween;
+var bunny_down_tween;
+
+var frog_up_tween;
+var frog_down_tween;
+
+var bunny_fx1, bunny_fx2;
+var frog_fx1, frog_fx2;
+
+var happiness;
+
+var i = 0;
+
+var clear = false;
+
+function create() {
+    game.stage.backgroundColor = '#FFFFFF';
+
+    game.input.onTap.add(onTap, this);
+
+    // 소리
+    love_fx = game.add.audio('dring');
+    bit_fx = game.add.audio('bit');
+
+    // 연주 시작.
+    game.time.events.add(1000, function(){ plays( rythmns)}, this);
+
+    bunny = game.add.sprite(50, 30, 'bunny');
+    frog = game.add.sprite(180, 80, 'frog');
+
+    bunny.animations.add('idle', [0]);
+    bunny.animations.add('jump', [1]);
+
+    bunny_up_tween=game.add.tween(bunny);
+    bunny_up_tween.to({ y: bunny.y - 50 }, 100, Phaser.Easing.Circular.Out);
+    bunny_down_tween = game.add.tween(bunny);
+   	bunny_down_tween.to({ y: bunny.y }, 100, Phaser.Easing.Circular.In);
+    bunny_up_tween.onComplete.add(
+    	function (){
+    		bunny_down_tween.start();
+    	}, this);
+    bunny_down_tween.onComplete.add(
+    	function (){
+    		bunny.animations.play('idle', 30, true);
+    	}, this);
+
+    frog.animations.add('idle', [0]);
+    frog.animations.add('jump', [1]);
+
+    frog_up_tween=game.add.tween(frog);
+    frog_up_tween.to({ y: frog.y - 50 }, 100, Phaser.Easing.Circular.Out);
+    frog_down_tween = game.add.tween(frog);
+   	frog_down_tween.to({ y: frog.y }, 100, Phaser.Easing.Circular.In);
+    frog_up_tween.onComplete.add(
+    	function (){
+    		frog_down_tween.start();
+    	}, this);
+    frog_down_tween.onComplete.add(
+    	function (){
+    		frog.animations.play('idle', 30, true);
+    	}, this);
+
+    bunny_fx1 = game.add.audio('bunny_fx1');
+    bunny_fx2 = game.add.audio('bunny_fx2');
+    frog_fx1 = game.add.audio('frog_fx1');
+    frog_fx2 = game.add.audio('frog_fx2');
+
+    var style = { font: "10px Arial", fill: "#999999", align: "center" };
+    happiness= game.add.text(0, 0, "0", style);
+}
+
+function setBPM(value){
+	bpm = value;
+	bps = bpm / 60;
+	spb = 1 / bps;
+	mspb = spb * 1000;
+}
+
+function bunnyJump(){
+	bunny_fx1.play();
+    bunny.animations.play('jump', 30, true);
+    bunny_up_tween.start();
+}
+function frogJump(){
+	frog_fx1.play();
+    frog.animations.play('jump', 30, true);
+    frog_up_tween.start();
+}
+function getError(){
+
+	// 비트 내에서의 오차 
+	var bit = parseInt( (game.time.now - turn_time_player)/mspb );
+	var error = ( game.time.now - turn_time_player)%mspb;
+	if (error > mspb/2){
+		bit++;
+		error -= mspb;
+	}
+
+	// 비트 오차
+	var bitmiss = 0;
+	while ( ( bit+bitmiss <= 0 || rythmn_cur[bit + bitmiss]==0) &&  ( bit+bitmiss >= rythmn_cur.length || rythmn_cur[bit - bitmiss]==0) ){
+		bitmiss++;
+	}
+
+	return error + bitmiss * mspb;
+}
+function perfact(){
+	return getError()==0;
+}
+
+function plays( rythmns ){
+	play(rythmns[i]);
+	onRythmnFinished = function () {
+		if ( ++i < rythmns.length) {
+			if (!isNaN(rythmns[i])){
+				setBPM( rythmns[i] );
+				i++
+				current_phaser++;
+			}
+			/*
+			if (touch_time < 2){
+				i = i > 0 ? i-1 : i;
+				love_fx.play();	
+			}*/
+			play(rythmns[i]);
+		} else {
+			onRythmnFinished = null;
+			clear = true;
+			happiness.text += "(end)"
+		}
+	}
+}
+
+function play(rythmn){
+    rythmn_cur=rythmn;
+	// enemy 차례부터 시작.
+	// enemy차례의 시작을 알리고,
+	frog_fx2.play();
+	// 일정 시간 후에, 연주 시작. 
+	game.time.events.add( start_delay, enemy_sing, this);
+	function enemy_sing(){
+		// enemy turn으로 설정.
+		turn_now = 0;
+		turn_time_enemy = game.time.now;
+		// enemy가 연주함. 
+		for ( var i = 0 ; i < rythmn.length ; i++){
+			if ( rythmn[i]==1 ) game.time.events.add( i * mspb , frogJump, this );
+		};
+	}
+	// enemy가 연주가 끝나면, 플레이어가 입력할 수 있도록 넘긴다.
+	game.time.events.add( (rythmn.length) * mspb, player_sing, this);
+
+
+
+	function player_sing(){
+		// 플레이어 차례인 것을 알리고,
+		bunny_fx2.play();
+		// 일정 시간 후에X, 바로 미믹 시작.
+		game.time.events.add( 0, player_sing, this);
+		function player_sing(){
+			turn_now = 1;
+			turn_time_player=game.time.now+start_delay;
+			touch_time=0;
+		}
+		// player가 연주가 끝나면, 플레이어가 입력할 수 없도록  넘긴다.
+		game.time.events.add( rythmn.length * mspb, function (){ turn_now = 2; onRythmnFinished()}, this);
+	}
+}
+var touch_time;
+
+function onTap(pointer, doubleTap) {
+	touch_time++;
+	if (clear){
+    	bunnyJump();
+    	game.time.events.add( Math.random() * 1000, frogJump, this);
+    	return;
+	}
+
+	var error = Math.abs(getError());
+	var happy = 1;
+	if ( error < mspb * 1.5 && turn_now==1){
+    	bunnyJump();
+    	if ( error < mspb * 0.5){
+    		happy = 100;
+    	} else if ( error  < mspb * 1){
+    		happy = 10;
+    	}
+    	happiness.text = parseInt(happiness.text) + happy;
+   	} else {
+    	bunnyJump();
+		//setBPM(200);
+   		//i = i > 0 ? i-1 : i;
+   		//happiness.text = "0";
+   		love_fx.play();
+   	}
+}
+
+function forgive(){
+
+}
+function update(){
+	if ( turn_now ==1 ){
+		if ( perfact() ) bit_fx.play();
+	}
+}
+    </script>
+
+</body>
+</html>
