@@ -2,6 +2,7 @@
 <html>
 <head>
     <script src="//cdn.jsdelivr.net/npm/phaser-ce@2.10.5/build/phaser.min.js"></script>
+    <script src="./phaser-extend/gameobjects/JumpingFriend.js"></script>
 </head>
 <body style="margin: 0px">
 
@@ -60,12 +61,7 @@ var turn_time_player;
 var onRythmnFinished;
 
 var bunny;
-
-var bunny_up_tween;
-var bunny_down_tween;
-
-var frog_up_tween;
-var frog_down_tween;
+var frog;
 
 var bunny_fx1, bunny_fx2;
 var frog_fx1, frog_fx2;
@@ -85,52 +81,22 @@ function create() {
     love_fx = game.add.audio('dring');
     bit_fx = game.add.audio('bit');
 
-    // 연주 시작.
-    game.time.events.add(1000, function(){ plays( rythmns)}, this);
+    frog = game.add.JumpingFriend(180, 80, 'frog', [0], [1], 50, null, 'frog_fx1');
+	bunny = game.add.JumpingFriend(50, 30, 'bunny', [0], [1], 50, null, 'bunny_fx1');
 
-    bunny = game.add.sprite(50, 30, 'bunny');
-    frog = game.add.sprite(180, 80, 'frog');
-
-    bunny.animations.add('idle', [0]);
-    bunny.animations.add('jump', [1]);
-
-    bunny_up_tween=game.add.tween(bunny);
-    bunny_up_tween.to({ y: bunny.y - 50 }, 100, Phaser.Easing.Circular.Out);
-    bunny_down_tween = game.add.tween(bunny);
-   	bunny_down_tween.to({ y: bunny.y }, 100, Phaser.Easing.Circular.In);
-    bunny_up_tween.onComplete.add(
-    	function (){
-    		bunny_down_tween.start();
-    	}, this);
-    bunny_down_tween.onComplete.add(
-    	function (){
-    		bunny.animations.play('idle', 30, true);
-    	}, this);
-
-    frog.animations.add('idle', [0]);
-    frog.animations.add('jump', [1]);
-
-    frog_up_tween=game.add.tween(frog);
-    frog_up_tween.to({ y: frog.y - 50 }, 100, Phaser.Easing.Circular.Out);
-    frog_down_tween = game.add.tween(frog);
-   	frog_down_tween.to({ y: frog.y }, 100, Phaser.Easing.Circular.In);
-    frog_up_tween.onComplete.add(
-    	function (){
-    		frog_down_tween.start();
-    	}, this);
-    frog_down_tween.onComplete.add(
-    	function (){
-    		frog.animations.play('idle', 30, true);
-    	}, this);
-
-    bunny_fx1 = game.add.audio('bunny_fx1');
     bunny_fx2 = game.add.audio('bunny_fx2');
-    frog_fx1 = game.add.audio('frog_fx1');
     frog_fx2 = game.add.audio('frog_fx2');
 
     var style = { font: "10px Arial", fill: "#999999", align: "center" };
     happiness= game.add.text(0, 0, "0", style);
+
+
+    // 연주 시작.
+    game.time.events.add(1000, function(){ plays( rythmns)}, this);
+
+    game.hihi = function () {console.log("hi")};
 }
+
 
 function setBPM(value){
 	bpm = value;
@@ -139,16 +105,6 @@ function setBPM(value){
 	mspb = spb * 1000;
 }
 
-function bunnyJump(){
-	bunny_fx1.play();
-    bunny.animations.play('jump', 30, true);
-    bunny_up_tween.start();
-}
-function frogJump(){
-	frog_fx1.play();
-    frog.animations.play('jump', 30, true);
-    frog_up_tween.start();
-}
 function getError(){
 
 	// 비트 내에서의 오차 
@@ -167,6 +123,7 @@ function getError(){
 
 	return error + bitmiss * mspb;
 }
+
 function perfact(){
 	return getError()==0;
 }
@@ -189,7 +146,7 @@ function plays( rythmns ){
 		} else {
 			onRythmnFinished = null;
 			clear = true;
-			happiness.text += "(end)"
+			happiness.text += "(end)";
 		}
 	}
 }
@@ -207,13 +164,11 @@ function play(rythmn){
 		turn_time_enemy = game.time.now;
 		// enemy가 연주함. 
 		for ( var i = 0 ; i < rythmn.length ; i++){
-			if ( rythmn[i]==1 ) game.time.events.add( i * mspb , frogJump, this );
+			if ( rythmn[i]==1 ) game.time.events.add( i*mspb , frog.jump, this );
 		};
 	}
 	// enemy가 연주가 끝나면, 플레이어가 입력할 수 있도록 넘긴다.
 	game.time.events.add( (rythmn.length) * mspb, player_sing, this);
-
-
 
 	function player_sing(){
 		// 플레이어 차례인 것을 알리고,
@@ -234,15 +189,15 @@ var touch_time;
 function onTap(pointer, doubleTap) {
 	touch_time++;
 	if (clear){
-    	bunnyJump();
-    	game.time.events.add( Math.random() * 1000, frogJump, this);
+    	bunny.jump();//bunnyJump();
+    	game.time.events.add( Math.random() * 1000, frog.Jump , this);
     	return;
 	}
 
 	var error = Math.abs(getError());
 	var happy = 1;
 	if ( error < mspb * 1.5 && turn_now==1){
-    	bunnyJump();
+    	bunny.jump();//bunnyJump();
     	if ( error < mspb * 0.5){
     		happy = 100;
     	} else if ( error  < mspb * 1){
@@ -250,7 +205,7 @@ function onTap(pointer, doubleTap) {
     	}
     	happiness.text = parseInt(happiness.text) + happy;
    	} else {
-    	bunnyJump();
+    	bunny.jump();//bunnyJump();
 		//setBPM(200);
    		//i = i > 0 ? i-1 : i;
    		//happiness.text = "0";
@@ -258,9 +213,6 @@ function onTap(pointer, doubleTap) {
    	}
 }
 
-function forgive(){
-
-}
 function update(){
 	if ( turn_now ==1 ){
 		if ( perfact() ) bit_fx.play();
