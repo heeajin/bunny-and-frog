@@ -45,7 +45,7 @@ var rythmn6 = new Array(1, _, 1, _, 1, 1, 1, _, 1, _, 1, _, _, _, 1, _);
 var rythmn7 = new Array(1, _, 1, _, 1, 1, 1, 1, 1, _, 1, _, 1, _, _, 1);
 
 var rythmns = new Array( rythmn1, rythmn1, rythmn2,
-						210,rythmn1, rythmn1, rythmn2, rythmn3,
+						210, rythmn1, rythmn1, rythmn2, rythmn3,
 						240, rythmn1, rythmn2, rythmn4, rythmn5,
 						280, rythmn1, rythmn2, rythmn4, rythmn5, rythmn6, rythmn7);
 var rphaser = new Array(0, 3, 8, 13);
@@ -81,7 +81,7 @@ function create() {
     love_fx = game.add.audio('dring');
     bit_fx = game.add.audio('bit');
 
-    frog = game.add.JumpingFriend(180, 80, 'frog', [0], [1], 50, null, 'frog_fx1');
+    frog  = game.add.JumpingFriend(180, 80, 'frog', [0], [1], 50, null, 'frog_fx1');
 	bunny = game.add.JumpingFriend(50, 30, 'bunny', [0], [1], 50, null, 'bunny_fx1');
 
     bunny_fx2 = game.add.audio('bunny_fx2');
